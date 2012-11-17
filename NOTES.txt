@@ -1,0 +1,52 @@
+OpenGL 3.3 (GLSL 3.3.0) is a reasonable target...
+
+A jumping off point for modern OpenGL:
+  http://gamedev.stackexchange.com/questions/32876/good-resources-for-learning-modern-opengl-3-0-or-later
+
+http://www.opengl-tutorial.org/
+	
+Starting with VBOs and shaders:
+	http://duriansoftware.com/joe/An-intro-to-modern-OpenGL.-Chapter-3:-3D-transformation-and-projection.html
+
+OpenGL:	
+	glfw
+	GLEW
+
+Audio:
+	http://www.xiph.org/downloads/
+	http://www.portaudio.com/download.html
+
+GLSL Version	OpenGL Version
+1.10.59	      2.0
+1.20.8	      2.1
+1.30.10	      3.0
+1.40.08	      3.1
+1.50.11	      3.2
+3.30.6	      3.3
+4.00.9	      4.0
+4.10.6	      4.1
+4.20.6	      4.2
+4.30.6	      4.3
+
+DirectX 9   <=> OpenGL 2.1
+DirectX 10  <=> OpenGL 3.0
+DirectX 11  <=> OpenGL 4.0
+
+http://gamedev.stackexchange.com/questions/31505/what-opengl-versions-to-learn-and-or-use
+
+According to Steam Hardware Survey (August 2012), basically everyone
+has at least a DX10 card, and 87% are DX10+ with Win7.
+  http://store.steampowered.com/hwsurvey?platform=pc
+
+OpenGL 3.1 removed a lot of features, OpenGL 3.2 introduces two profiles:
+'core' and 'compatibility' (core is only shader-based, etc)
+
+iPhone and Android are OpenGL ES 2.0, which is a stripped down version
+of Open GL that uses shaders
+
+
+Matrix FAQ:
+	http://www.cs.princeton.edu/~gewang/projects/darth/stuff/quat_faq.html
+
+OpenGL, with more detailed matrix math:
+	http://unspecified.wordpress.com/2012/06/21/calculating-the-gluperspective-matrix-and-other-opengl-matrix-maths/
