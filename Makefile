@@ -32,7 +32,7 @@ INCLUDES = -I./include
 default: glew.o glm.o shader.o src/main.c
 	$(CC) $(DEADCODESTRIP) $(CFLAGS) $(INCLUDES) \
   glew.o glm.o shader.o src/main.c \
-  -o game.exe $(LFLAGS) $(WIN_LIBS)
+  -o a.exe $(LFLAGS) $(WIN_LIBS)
 
 glew.o: src/glew.c
 	$(CC) -c $(CFLAGS) $(INCLUDES) src/glew.c -o glew.o \
@@ -43,6 +43,6 @@ glm.o: src/glm.c
 
 shader.o: src/shader.c
 	$(CC) -c $(CFLAGS) $(INCLUDES)  src/shader.c -o shader.o
-
-game.o: src/game.c
-	$(CC) $(CFLAGS) $(INCLUDES) -c src/game.c -o game.o
+ 
+clean: src/game.c
+	rm glm.o shader.o glew.o a.exe

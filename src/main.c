@@ -2,7 +2,27 @@
 	
 */
 
-#include "game.h"
+#include <stdio.h>
+#include <stdlib.h>
+
+#include <GL/glew.h>
+#include <GL/glfw.h>
+
+
+#ifdef _MSC_VER
+
+typedef __int32 int32_t;
+typedef unsigned __int32 uint32_t;
+typedef __int64 int64_t;
+typedef unsigned __int64 uint64_t;
+
+#else
+#include <stdint.h>
+#endif
+
+#include <math.h>
+
+//#include "game.h"
 #include "glm.h"
 #include "shader.h"
 
@@ -46,6 +66,64 @@ void animate( double dt )
 	}
 }
 
+static const char* VERTEX_SHADER = 
+"//#version 330 core "
+
+// Input vertex data, different for all executions of this shader.
+" layout(location = 0) in vec3 vertexPosition_modelspace; "
+" layout(location = 1) in float intensity; "
+
+" uniform float threshold; "
+" uniform mat4 MVP; "
+
+" mat4 glmTranslate( float x, float y, float z ) "
+" { "
+" 	return mat4 ( "
+" 		1,	0,	0,	x, "
+" 		0,	1,	0,	y, "
+" 		0,	0,	1,	z, "
+" 		0,	0,	0,	1 "
+" 	); "
+" } "
+
+" void main() "
+" { "
+" 	// transform to 4d vector "
+" 	vec4 v = vec4( vertexPosition_modelspace, 1 ); "
+	
+" 	if( intensity < threshold ) "
+" 	{ "
+" 		gl_PointSize = 0; "
+" 		gl_Position = vec4( 0, 0.0, 0.0, 0.0 ); "
+" 	} "
+" 	else "
+"  	{ "
+" 		gl_PointSize = 3; "
+		
+" 		mat4 trans = glmTranslate( 0.5, 0.2, 2 ); "
+		
+" 		gl_Position = trans * MVP * v; "
+" 	}"
+
+	
+" } "
+;
+
+static const char* FRAGMENT_SHADER = 
+
+"#version 330 core "
+
+// Output data
+"out vec4 color; "
+
+"void main() "
+"{ "
+"	// Output color = red  "
+"	color = vec4(1,0,0, 1); "
+" } "
+;
+
+
 void init( int width, int height, char* title )
 {
   if( !glfwInit() )
@@ -53,19 +131,25 @@ void init( int width, int height, char* title )
 		fprintf( stderr, "Unable to init GLFW\n" );
 	}
 
-  // open an OpenGL 4.3 'core' context
+  // open an OpenGL 3.3 'core' context
 	glfwOpenWindowHint( GLFW_FSAA_SAMPLES, 4 );
 	glfwOpenWindowHint( GLFW_OPENGL_VERSION_MAJOR, 3 );
 	glfwOpenWindowHint( GLFW_OPENGL_VERSION_MINOR, 3 );
-	glfwOpenWindowHint( GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE );
+  glfwOpenWindowHint( GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE );
+	glfwOpenWindowHint( GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE );
 
 	// open a window and creates OpenGL context
 	if( !glfwOpenWindow( width, height, 0,0,0,0, 32,0, GLFW_WINDOW ) )
   {
 			fprintf( stderr, "Failed to open GLFW window\n" );
+      
 			glfwTerminate();
 			exit(1);
 	}
+  
+  int major, minor, rev;
+  glfwGetGLVersion( &major, &minor, &rev );
+  printf( "OpenGL version: %d.%d.%d", major, minor, rev );
   
 	// setup glew
   // 
@@ -125,16 +209,24 @@ int main( int argc, char* argv[] )
 	GLuint vertexArrayID;
 	GLuint vertexbuffer;
 	GLuint vertexIntensityBuffer;
+  
+  printf("Initializing window\n");
 
   init( 1024, 768, "Test" );
   
   // setup buffers and shaders
 	glClearColor( 0.0f, 0.0f, 0.3f, 0.0f );
   
+  printf("Binding vertex arrays\n");
+  
   glGenVertexArrays( 1, &vertexArrayID );
 	glBindVertexArray( vertexArrayID );
   
-  GLuint programID = load_shader_files( "vertex.v.glsl", "fragment.f.glsl" );
+  printf("Loading shaders...");
+  
+  GLuint programID = load_shader( VERTEX_SHADER, FRAGMENT_SHADER ); //load_shader_files( "vertex.v.glsl", "fragment.f.glsl" );
+  
+  printf(" loaded program %d \n", programID);
 	
 	GLfloat vertex_data[VERTEX_COUNT];
 	for( int i=0; i<VERTEX_COUNT; i+=3 )
@@ -158,6 +250,8 @@ int main( int argc, char* argv[] )
 		200,
 		50
 	};*/
+  
+  printf("Generating buffers\n");
 	
 	glGenBuffers( 1, &vertexbuffer );
   glBindBuffer( GL_ARRAY_BUFFER, vertexbuffer );
@@ -189,6 +283,8 @@ int main( int argc, char* argv[] )
     {
       continue;
 		}
+    
+    printf("Rendering\n");
     
     // TODO: only render at a specific frame rate
 
