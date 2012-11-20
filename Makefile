@@ -1,6 +1,6 @@
 CC = gcc
 
-DEADCODESTRIP = -Wl,-static \
+DEADCODESTRIP =  \
 								-fdata-sections \
 								-ffunction-sections \
 								-Wl,--gc-sections \
@@ -19,24 +19,41 @@ DEADCODESTRIP = -Wl,-static \
 # -s
 # strip debug information
 								
-CFLAGS = -O3 -m64 -Wall -std=c99 -pedantic -DGLEW_STATIC -DGLEW_NO_GLU
+CFLAGS = -O3 -m64 -Wall -std=c99 -pedantic -DGLEW_STATIC -DGLEW_NO_GLU -DGLFW_NO_GLU
 
 
 
-# windows
-WIN_LIBS = -lglfw  -lglu32 -lopengl32
-
-LFLAGS = -L./lib 
 INCLUDES = -I./include
 
-default: glew.o glm.o shader.o src/main.c
+default: 
+	echo "make win64 | x11"
+
+win64: LFLAGS = -L./lib/win64 
+win64: LIBS = -lglfw -lglu32 -lopengl32
+win64: CFLAGS += -Wl,-static 
+win64: EXEC_NAME = a.exe
+win64: executable
+
+win64-clean:
+	rm a.exe
+
+x11: LFLAGS = -L./lib/x11  -L/usr/lib
+x11: LIBS = ./lib/x11/libglfw.a -lGLU -lGL
+x11: EXEC_NAME = a.out
+x11: executable
+
+x11-clean:
+	rm a.out
+
+executable: glew.o glm.o shader.o src/main.c
 	$(CC) $(DEADCODESTRIP) $(CFLAGS) $(INCLUDES) \
   glew.o glm.o shader.o src/main.c \
-  -o a.exe $(LFLAGS) $(WIN_LIBS)
+  $(LFLAGS) $(LIBS) \
+  -o $(EXEC_NAME) 
 
 glew.o: src/glew.c
 	$(CC) -c $(CFLAGS) $(INCLUDES) src/glew.c -o glew.o \
-  $(LFLAGS) $(WIN_LIBS)
+  $(LFLAGS) $(LIBS)
 
 glm.o: src/glm.c
 	$(CC) -c $(CFLAGS) $(INCLUDES)  src/glm.c -o glm.o
@@ -44,5 +61,5 @@ glm.o: src/glm.c
 shader.o: src/shader.c
 	$(CC) -c $(CFLAGS) $(INCLUDES)  src/shader.c -o shader.o
  
-clean:
-	rm glm.o shader.o glew.o a.exe
+clean-objs:
+	rm glm.o shader.o glew.o
