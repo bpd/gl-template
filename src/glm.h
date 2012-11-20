@@ -22,6 +22,8 @@ glmMat4f glmMulMat4f( glmMat4f u, glmMat4f v );
 
 glmVec3f glmNormalize( glmVec3f u );
 
+glmVec3f glmCross( glmVec3f u, glmVec3f v );
+
 glmMat4f glmIdentity();
 
 glmMat4f glmTranslatef( float x, float y, float z );

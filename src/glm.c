@@ -43,7 +43,7 @@ glmVec3f glmNormalize( glmVec3f u )
 	return v;
 }
 
-static glmVec3f glmCross( glmVec3f u, glmVec3f v )
+glmVec3f glmCross( glmVec3f u, glmVec3f v )
 {
 	glmVec3f w = {
 		   (u.y * v.z) - (v.y * u.z),

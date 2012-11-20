@@ -44,5 +44,5 @@ glm.o: src/glm.c
 shader.o: src/shader.c
 	$(CC) -c $(CFLAGS) $(INCLUDES)  src/shader.c -o shader.o
  
-clean: src/game.c
+clean:
 	rm glm.o shader.o glew.o a.exe
