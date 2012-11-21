@@ -34,6 +34,11 @@ default: glew.o glm.o shader.o src/main.c
   glew.o glm.o shader.o src/main.c \
   -o a.exe $(LFLAGS) $(WIN_LIBS)
 
+room: glew.o glm.o shader.o src/room.c
+	$(CC) $(DEADCODESTRIP) $(CFLAGS) $(INCLUDES) \
+  glew.o glm.o shader.o src/room.c \
+  -o room.exe $(LFLAGS) $(WIN_LIBS)
+  
 glew.o: src/glew.c
 	$(CC) -c $(CFLAGS) $(INCLUDES) src/glew.c -o glew.o \
   $(LFLAGS) $(WIN_LIBS)

@@ -66,60 +66,6 @@ void animate( double dt )
 	}
 }
 
-static const char* VERTEX_SHADER = 
-"#version 330 core                                         \n"
-
-" uniform mat4 MVP;                                        "
-" uniform mat4 modelview;                                  "
-" uniform vec3 lightPos;                     "
-
-// Input vertex data, different for all executions of this shader.
-" layout(location = 0) in vec3 vertexPosition_modelspace;  "
-" layout(location = 1) in vec3 normal;                     "
-
-" out vec3 fragNormal; "
-" out vec3 fragPosition; "
-
-" void main()                                              "
-" {                                                        "
-"   mat3 normalmatrix = mat3(modelview); "
-
-" fragNormal = normal; "
-//" fragNormal = normalmatrix * normalize(normal); "
-" fragPosition = vertexPosition_modelspace; "
-
-"gl_Position = MVP * vec4( vertexPosition_modelspace, 1 ); "
-
-" } "
-;
-
-static const char* FRAGMENT_SHADER = 
-
-"#version 330 core                \n"
-
-" uniform vec3 lightPos;                     "
-
-"in vec3 fragNormal; "
-"in vec3 fragPosition; "
-
-"out vec4 color;                  "
-
-"void main()                      "
-"{                                "
-"	// Output color = red           \n"
-"	color = vec4(1,0,0, 1);         "
-""
-" vec3 lightDir = normalize(lightPos - fragPosition);   "
-" float diffuseLightIntensity = max(0, dot(normalize(fragNormal), lightDir)); "
-" color = vec4(diffuseLightIntensity * color.rgb, color.a); "
-" color.rgb += vec3(0.2,0.2,0.2); "
-
-//" color = color * 0.3 + color * max(dot(fragNormal, lightPos), 0.0); "
-
-" }                               "
-;
-
-
 void init( int width, int height, char* title )
 {
   if( !glfwInit() )
@@ -161,77 +107,79 @@ void init( int width, int height, char* title )
   //fprintf( stdout, "version: %s", glGetString( GL_VERSION ) );
 }
 
-static glmMat4f projection;
+GLuint roomArrayID;
+GLuint roomBufferID;
 
-static glmMat4f modelview;
+int roomBufferSize;
 
-static glmMat4f mvp;
-
-glmMat4f buildMatrix()
+void bind_room()
 {
-	// set 'mvp' uniform
-	projection = glmPerspective(
-		45.0f,			// horizontal Field of View (degrees), (90=wide,30=zoomed)
-		4.0f / 3.0f,// Aspect Ratio
-		0.1f,				// Near clipping plane, keep as big as possible
-		100.0f			// Far clipping plane, keep as little as possible
-	);
-	
-	glmVec3f eye = { 0, 0, 5 };
-	glmVec3f center = { 0, 0, 0 };
-	glmVec3f up = { 0, 1, 0 };
-	
-	glmMat4f view = glmLookAt( eye, center, up ); //glmIdentity();
-	
-	glmMat4f model = glmIdentity();	
-	
-	model = glmMulMat4f( model, glmScalef( 0.5, 0.5, 0.5f ) );
-	
-	//model = glmMulMat4f( model, glmTranslatef( 0, 0, y ) );
-	
-	model = glmMulMat4f( model, glmRotateX( y ) );
-	model = glmMulMat4f( model, glmRotateY( x ) );
-	//model = glmMulMat4f( model, glmRotateZ( y ) );
+  glGenVertexArrays( 1, &roomArrayID );
+	glBindVertexArray( roomArrayID );
   
-  glmMat4f modelview = glmMulMat4f( view, model );
-	
-	mvp = glmMulMat4f( projection, modelview );
-	
-	return mvp;
+  float vertices[] = {
+    // side
+    -4,  2,   2,
+    -4, -2,   2,
+    -4, -2,  -2,
+    
+    -4,  2,   2,
+    -4, -2,  -2,
+    -4,  2,  -2,
+    
+    // bottom
+    -4,  -2,   2,
+     2,  -2,   2,
+    -4,  -2,  -2,
+    
+     2,  -2,   2,
+    -4,  -2,  -2,
+     2,  -2,  -2
+  };
+  
+  roomBufferSize = sizeof(vertices);
+  
+  glGenBuffers( 1, &roomBufferID );
+  glBindBuffer( GL_ARRAY_BUFFER, roomBufferID );
+  glBufferData( GL_ARRAY_BUFFER, roomBufferSize, &vertices[0], GL_STATIC_DRAW );
+  
 }
 
 #define ATTRIB_VERTEX 0
 #define ATTRIB_NORMAL 1
 
-int main( int argc, char* argv[] )
+void render_room()
 {
-  int running = GL_TRUE;
-	double t = 0.0;
-	
-	GLuint vertexArrayID;
-	GLuint vertexbuffer;
-  GLuint normalbuffer;
-	//GLuint vertexIntensityBuffer;
+  glBindVertexArray( roomArrayID );
   
-  printf("Initializing window\n");
+  glEnableVertexAttribArray( ATTRIB_VERTEX );
+  glBindBuffer( GL_ARRAY_BUFFER, roomBufferID );
+  glVertexAttribPointer(
+    ATTRIB_VERTEX,				// attribute 0
+    3,				// size
+    GL_FLOAT,	// type
+    GL_FALSE,	// normalized?
+    0,				// stride, skip intensity
+    (void*)0	// array buffer offset
+  );
+  
+  // draw one triangle
+  glDrawArrays( GL_TRIANGLES, 0, roomBufferSize ); // starting from vertex 0; 3 vertices total
+    
+  glDisableVertexAttribArray( ATTRIB_VERTEX );
+}
 
-  init( 1024, 768, "Test" );
-  
-  // setup buffers and shaders
-	glClearColor( 0.0f, 0.0f, 0.3f, 0.0f );
-  
-  printf("Binding vertex arrays\n");
-  
-  glGenVertexArrays( 1, &vertexArrayID );
-	glBindVertexArray( vertexArrayID );
-  
-  printf("Loading shaders...");
-  
-  GLuint programID = load_shader( VERTEX_SHADER, FRAGMENT_SHADER ); //load_shader_files( "vertex.v.glsl", "fragment.f.glsl" );
-  
-  printf(" loaded program %d \n", programID);
-	
-	GLfloat vertex_data[] = {
+
+
+GLuint vertexArrayID;
+GLuint vertexbuffer;
+GLuint normalbuffer;
+
+int object_vertex_count;
+
+void bind_object()
+{
+  GLfloat vertex_data[] = {
     -3, 0,  0,
      0, 0, -1,
      0, 1,  0,
@@ -239,8 +187,10 @@ int main( int argc, char* argv[] )
      -3, 0, 0,
       0, 1, 0,
       0, 0, 1
-      
   };
+  
+  object_vertex_count = sizeof(vertex_data) / 3;
+  
   // triangle normal = vector cross product of two edges of the triangle
   glmVec3f norm1 = glmCross( (glmVec3f){ vertex_data[0], vertex_data[1], vertex_data[2] }, 
                              (glmVec3f){ vertex_data[3], vertex_data[4], vertex_data[5] } );
@@ -259,23 +209,171 @@ int main( int argc, char* argv[] )
   };
  
   printf("Generating buffers\n");
+  
+  glGenVertexArrays( 1, &vertexArrayID );
+	glBindVertexArray( vertexArrayID );
 	
 	glGenBuffers( 1, &vertexbuffer );
   glBindBuffer( GL_ARRAY_BUFFER, vertexbuffer );
 	glBufferData( GL_ARRAY_BUFFER, sizeof(vertex_data), vertex_data, GL_STATIC_DRAW );
+  glVertexAttribPointer(
+    ATTRIB_VERTEX,				// attribute 0
+    3,				// size
+    GL_FLOAT,	// type
+    GL_FALSE,	// normalized?
+    0,				// stride, skip intensity
+    (void*)0	// array buffer offset
+  );
   
   glGenBuffers( 1, &normalbuffer );
   glBindBuffer( GL_ARRAY_BUFFER, normalbuffer );
 	glBufferData( GL_ARRAY_BUFFER, sizeof(normal_data), normal_data, GL_STATIC_DRAW );
-	
+  glVertexAttribPointer(
+    ATTRIB_NORMAL,				// attribute 1
+    3,				// size
+    GL_FLOAT,	// type
+    GL_FALSE,	// normalized?
+    0,				// stride, skip vertex
+    (void*)0	// array buffer offset
+  );
+  
+  glBindBuffer( GL_ARRAY_BUFFER, 0 ); // deselect (bind to 0) the VBO
+  glBindVertexArray( 0 );  // deselect (bind to 0) the VAO
+}
 
-  GLuint modelviewID = glGetUniformLocation( programID, "modelview" );
+void render_object()
+{
+  glBindVertexArray( vertexArrayID );
+	
+  // enable the VAAs
+  glEnableVertexAttribArray( ATTRIB_VERTEX );
+  glEnableVertexAttribArray( ATTRIB_NORMAL );
   
+  // run the vertices through the shader
+  glDrawArrays( GL_TRIANGLES, 0, object_vertex_count );
+  
+  // disable the VAAs
+  glDisableVertexAttribArray( ATTRIB_NORMAL );
+  glDisableVertexAttribArray( ATTRIB_VERTEX );
+}
+
+
+
+static glmMat4f projection;
+
+static glmMat4f model;
+
+static glmMat4f view;
+
+static glmMat4f modelview;
+
+static glmMat4f mvp;
+
+void print( glmMat4f* m )
+{
+  float* mat = (float*)m;
+  
+  int i;
+  for( i=0; i<16; i+=4 )
+  {
+    printf(" %f, %f, %f, %f, \n", mat[i], mat[i+1], mat[i+2], mat[i+3] );
+  }
+  printf("\n");
+}
+
+glmMat4f buildMatrix()
+{
+	// set 'mvp' uniform
+	projection = glmPerspective(
+		45.0f,			// horizontal Field of View (degrees), (90=wide,30=zoomed)
+		4.0f / 3.0f,// Aspect Ratio
+		0.1f,				// Near clipping plane, keep as big as possible
+		100.0f			// Far clipping plane, keep as little as possible
+	);
+  
+  //printf("projection:\n");
+  //print(&projection);
+	
+	glmVec3f eye = { 0, 0, 10 };
+	glmVec3f center = { 0, 0, 0 };
+	glmVec3f up = { 0, 1, 0 };
+	
+	view = glmLookAt( eye, center, up ); //glmIdentity();
+  
+  //printf("view:\n");
+  //print(&view);
+	
+	model = glmIdentity();	
+	
+	//model = glmMulMat4f( model, glmScalef( 0.5, 0.5, 0.5f ) );
+	
+	//model = glmMulMat4f( model, glmTranslatef( 0, 0, y ) );
+	
+	model = glmMulMat4f( model, glmRotateX( y ) );
+	model = glmMulMat4f( model, glmRotateY( x ) );
+	//model = glmMulMat4f( model, glmRotateZ( y ) );
+  
+  //printf("model:\n");
+  //print(&model);
+  
+  glmMat4f modelview = glmMulMat4f( view, model );
+  
+  //printf("modelview:\n");
+  //print(&modelview);
+	
+	mvp = glmMulMat4f( projection, modelview );
+  
+  //printf("mvp:\n");
+  //print(&mvp);
+  
+  /*float mvp2[] = {
+    1.0, 0.0, 0.0, 0.0,
+    0.0, 1.0, 0.0, 0.0,
+    0.0, 0.0, 1.0, -10.0,
+    0.0, 0.0, 0.0, 1.0
+  };*/
+  
+  //print(&mvp);
+  
+  
+	//return *((glmMat4f*)(&mvp2));
+	return mvp;
+}
+
+
+
+
+int main( int argc, char* argv[] )
+{
+  int running = GL_TRUE;
+	double t = 0.0;
+	
+  printf("Initializing window\n");
+
+  init( 1024, 768, "Test" );
+  
+  // setup buffers and shaders
+	glClearColor( 0.0f, 0.0f, 0.3f, 0.0f );
+  
+  printf("Loading shaders...");
+  
+  //GLuint programID = load_shader( VERTEX_SHADER, FRAGMENT_SHADER ); //load_shader_files( "vertex.v.glsl", "fragment.f.glsl" );
+  GLuint programID = load_shader_files( "light.v.glsl", "light.f.glsl" );
+  
+  printf(" loaded program %d \n", programID);
+	
+  // bind VBOs
+	bind_object();
+  bind_room();
+	
+  // configure uniforms
+  GLuint modelviewID = glGetUniformLocation( programID, "MV" );
 	GLuint mvpUniformID = glGetUniformLocation( programID, "MVP" );
-  
-  GLuint lightPosID = glGetUniformLocation( programID, "lightPos" );
-  
-  glUniform3f(lightPosID, 0, 0, 0);
+  GLuint vUniformID = glGetUniformLocation( programID, "V" );
+  GLuint mUniformID = glGetUniformLocation( programID, "M" );
+
+  glUniform3f( glGetUniformLocation( programID, "LightPosition_worldspace" ), 0, 0, 2);
+
 	
 	t = glfwGetTime();
 	
@@ -293,65 +391,28 @@ int main( int argc, char* argv[] )
     {
       continue;
 		}
-    
-    //printf("Rendering\n");
-    
-    // TODO: only render at a specific frame rate
 
     // setup GL config
 		glEnable( GL_DEPTH_TEST );
 		glDepthFunc( GL_LESS );
 		
-		glEnable( GL_BLEND );
-		glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
-		
-		// allow shaders to adjust point size
-		//glEnable(GL_VERTEX_PROGRAM_POINT_SIZE);
-		
 		glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
     
+    // enable the shader
     glUseProgram( programID );
     
-		// set 'offset' uniform
-    //glUniform1f( thresholdUniformID, y );
-		
+		// provide the shader with the uniforms
 		glmMat4f mvp = buildMatrix();
 		
 		glUniformMatrix4fv( mvpUniformID, 1, GL_TRUE, (const GLfloat*)&mvp );
-    
     glUniformMatrix4fv( modelviewID, 1, GL_TRUE, (const GLfloat*)&modelview );
-	
-    // bind the vertex attribute array
-		glEnableVertexAttribArray( ATTRIB_VERTEX );
-    glBindBuffer( GL_ARRAY_BUFFER, vertexbuffer );
-    glVertexAttribPointer(
-      ATTRIB_VERTEX,				// attribute 0
-      3,				// size
-      GL_FLOAT,	// type
-      GL_FALSE,	// normalized?
-      0,				// stride, skip intensity
-      (void*)0	// array buffer offset
-    );
-		
-		glEnableVertexAttribArray( ATTRIB_NORMAL );
-		glBindBuffer( GL_ARRAY_BUFFER, normalbuffer );
-		glVertexAttribPointer(
-      ATTRIB_NORMAL,				// attribute 1
-      3,				// size
-      GL_FLOAT,	// type
-      GL_FALSE,	// normalized?
-      0,				// stride, skip vertex
-      (void*)0	// array buffer offset
-    );
-		
-		
-		
     
-    // run the vertices through the shader
-    glDrawArrays( GL_TRIANGLES, 0, sizeof(vertex_data) / 3 ); // starting from vertex 0; 3 vertices total
+    glUniformMatrix4fv( mUniformID, 1, GL_TRUE, (const GLfloat*)&model );
+    glUniformMatrix4fv( vUniformID, 1, GL_TRUE, (const GLfloat*)&view );
     
-		glDisableVertexAttribArray( ATTRIB_NORMAL );
-    glDisableVertexAttribArray( ATTRIB_VERTEX );
+    // draw VBOs
+    render_room();
+    render_object();
 		
 		// Swap front and back rendering buffers
 		glfwSwapBuffers();
@@ -361,10 +422,16 @@ int main( int argc, char* argv[] )
 							&& glfwGetWindowParam( GLFW_OPENED );
 	}
   
+  // clean up object data
   glDeleteBuffers( 1, &vertexbuffer );
 	glDeleteBuffers( 1, &normalbuffer );
-  glDeleteProgram( programID );
   glDeleteVertexArrays( 1, &vertexArrayID );
+  
+  // clean up room data
+  glDeleteBuffers( 1, &roomBufferID );
+  glDeleteVertexArrays( 1, &roomArrayID );
+  
+  glDeleteProgram( programID );
 	
 	glfwTerminate();
 
