@@ -43,6 +43,13 @@ glmVec3f glmNormalize( glmVec3f u )
 	return v;
 }
 
+void glmCross3f( float* u, float* v, float* dst )
+{
+	dst[0] = (u[1] * v[2]) - (v[1] * u[2]);
+  dst[1] = -( (u[0] * v[2]) - (v[0] * u[2]) );
+	dst[2] = (u[0] * v[1]) - (v[0] * u[1]);
+}
+
 glmVec3f glmCross( glmVec3f u, glmVec3f v )
 {
 	glmVec3f w = {

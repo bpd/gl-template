@@ -4,6 +4,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include <GL/glew.h>
 #include <GL/glfw.h>
@@ -107,10 +108,51 @@ void init( int width, int height, char* title )
   //fprintf( stdout, "version: %s", glGetString( GL_VERSION ) );
 }
 
+
+void triangle_normals( float* vertices, float* dst_normals )
+{
+  float* vertex1 = &vertices[0];
+  float* vertex2 = &vertices[2];
+  float* vertex3 = &vertices[5];
+  
+  // use vertex1 as reference vertex
+  
+  float vector1[] = {
+    vertex2[0] - vertex1[0],
+    vertex2[1] - vertex1[1],
+    vertex2[2] - vertex1[2]
+  };
+  
+  float vector2[] = {
+    vertex3[0] - vertex1[0],
+    vertex3[1] - vertex1[1],
+    vertex3[2] - vertex1[2]
+  };
+  
+  float normal[3];
+    
+  glmCross3f( vector1, vector2, normal );
+  
+  int i,j;
+  for( i=0,j=0; i<3; i++ )
+  {
+    dst_normals[j++] = normal[0];
+    dst_normals[j++] = normal[1];
+    dst_normals[j++] = normal[2];
+  }
+}
+
+
+
 GLuint roomArrayID;
 GLuint roomBufferID;
+GLuint roomNormalBufferID;
 
-int roomBufferSize;
+int room_vertex_count;
+
+
+#define ATTRIB_VERTEX 0
+#define ATTRIB_NORMAL 1
 
 void bind_room()
 {
@@ -137,23 +179,15 @@ void bind_room()
      2,  -2,  -2
   };
   
-  roomBufferSize = sizeof(vertices);
+  float normals[sizeof(vertices)];
+  
+  triangle_normals( vertices, normals );
+  
+  room_vertex_count = sizeof(vertices) / 3;
   
   glGenBuffers( 1, &roomBufferID );
   glBindBuffer( GL_ARRAY_BUFFER, roomBufferID );
-  glBufferData( GL_ARRAY_BUFFER, roomBufferSize, &vertices[0], GL_STATIC_DRAW );
-  
-}
-
-#define ATTRIB_VERTEX 0
-#define ATTRIB_NORMAL 1
-
-void render_room()
-{
-  glBindVertexArray( roomArrayID );
-  
-  glEnableVertexAttribArray( ATTRIB_VERTEX );
-  glBindBuffer( GL_ARRAY_BUFFER, roomBufferID );
+  glBufferData( GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW );
   glVertexAttribPointer(
     ATTRIB_VERTEX,				// attribute 0
     3,				// size
@@ -162,9 +196,35 @@ void render_room()
     0,				// stride, skip intensity
     (void*)0	// array buffer offset
   );
+  /*
+  glGenBuffers( 1, &roomNormalBufferID );
+  glBindBuffer( GL_ARRAY_BUFFER, roomNormalBufferID );
+	glBufferData( GL_ARRAY_BUFFER, sizeof(normals), normals, GL_STATIC_DRAW );
+  glVertexAttribPointer(
+    ATTRIB_NORMAL,				// attribute 1
+    3,				// size
+    GL_FLOAT,	// type
+    GL_FALSE,	// normalized?
+    0,				// stride, skip vertex
+    (void*)0	// array buffer offset
+  );*/
   
+  glBindBuffer( GL_ARRAY_BUFFER, 0 ); // deselect (bind to 0) the VBO
+  glBindVertexArray( 0 );  // deselect (bind to 0) the VAO
+  
+}
+
+
+
+void render_room()
+{
+  glBindVertexArray( roomArrayID );
+  
+  glEnableVertexAttribArray( ATTRIB_VERTEX );
+  glBindBuffer( GL_ARRAY_BUFFER, roomBufferID );
+ 
   // draw one triangle
-  glDrawArrays( GL_TRIANGLES, 0, roomBufferSize ); // starting from vertex 0; 3 vertices total
+  glDrawArrays( GL_TRIANGLES, 0, room_vertex_count ); // starting from vertex 0; 3 vertices total
     
   glDisableVertexAttribArray( ATTRIB_VERTEX );
 }
@@ -186,27 +246,40 @@ void bind_object()
      
      -3, 0, 0,
       0, 1, 0,
-      0, 0, 1
+      0, 0, 1,
+      
+     -3, 0, 0,
+      0, -1, 0,
+      0, 0, 1,
+      
+     -3, 0, 0,
+      0, -1, 0,
+      0, 0, -1,
+     
+      0, 0, 1,
+      0, 1, 0,
+      1, 0, 0,
+      
+      0, 0, -1,
+      0, 1, 0,
+      1, 0, 0,
+      
+      0, 0, 1,
+      0, -1, 0,
+      1, 0, 0,
+      
+      0, 0, -1,
+      1, 0, 0,
+      0, -1, 0
   };
   
   object_vertex_count = sizeof(vertex_data) / 3;
   
-  // triangle normal = vector cross product of two edges of the triangle
-  glmVec3f norm1 = glmCross( (glmVec3f){ vertex_data[0], vertex_data[1], vertex_data[2] }, 
-                             (glmVec3f){ vertex_data[3], vertex_data[4], vertex_data[5] } );
-
-  glmVec3f norm2 = glmCross( (glmVec3f){ vertex_data[9], vertex_data[10], vertex_data[11] }, 
-                             (glmVec3f){ vertex_data[12], vertex_data[13], vertex_data[14] } );
+  float normal_data[sizeof(vertex_data)];
   
-  GLfloat normal_data[] = {
-    norm1.x, norm1.y, norm1.z,
-    norm1.x, norm1.y, norm1.z,
-    norm1.x, norm1.y, norm1.z,
-    
-    norm2.x, norm2.y, norm2.z,
-    norm2.x, norm2.y, norm2.z,
-    norm2.x, norm2.y, norm2.z
-  };
+  //triangle_normals( vertex_data, normal_data );
+  
+  memset( normal_data, 0, sizeof(normal_data) );
  
   printf("Generating buffers\n");
   
@@ -358,7 +431,7 @@ int main( int argc, char* argv[] )
   printf("Loading shaders...");
   
   //GLuint programID = load_shader( VERTEX_SHADER, FRAGMENT_SHADER ); //load_shader_files( "vertex.v.glsl", "fragment.f.glsl" );
-  GLuint programID = load_shader_files( "light.v.glsl", "light.f.glsl" );
+  GLuint programID = load_shader_files( "light2.v.glsl", "light2.f.glsl" );
   
   printf(" loaded program %d \n", programID);
 	

@@ -24,6 +24,8 @@ glmVec3f glmNormalize( glmVec3f u );
 
 glmVec3f glmCross( glmVec3f u, glmVec3f v );
 
+void glmCross3f( float* u, float* v, float* dst );
+
 glmMat4f glmIdentity();
 
 glmMat4f glmTranslatef( float x, float y, float z );
