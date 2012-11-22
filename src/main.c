@@ -146,7 +146,7 @@ void triangle_normals( float* vertices, float* dst_normals )
 
 GLuint roomArrayID;
 GLuint roomBufferID;
-GLuint roomNormalBufferID;
+GLuint roomColorBufferID;
 
 int room_vertex_count;
 
@@ -179,11 +179,17 @@ void bind_room()
      2,  -2,  -2
   };
   
-  float normals[sizeof(vertices)];
+  room_vertex_count = sizeof(vertices) / (3 * sizeof(float)); // 3 floats per vertex, four bytes each
   
-  triangle_normals( vertices, normals );
+  int vertices_len = sizeof(vertices) / sizeof(float);
   
-  room_vertex_count = sizeof(vertices) / 3;
+  float colors[ vertices_len ];
+  
+  int i;
+  for( i=0; i<vertices_len; i++ )
+  {
+    colors[i] = 0.15f;
+  }
   
   glGenBuffers( 1, &roomBufferID );
   glBindBuffer( GL_ARRAY_BUFFER, roomBufferID );
@@ -196,10 +202,10 @@ void bind_room()
     0,				// stride, skip intensity
     (void*)0	// array buffer offset
   );
-  /*
-  glGenBuffers( 1, &roomNormalBufferID );
-  glBindBuffer( GL_ARRAY_BUFFER, roomNormalBufferID );
-	glBufferData( GL_ARRAY_BUFFER, sizeof(normals), normals, GL_STATIC_DRAW );
+  
+  glGenBuffers( 1, &roomColorBufferID );
+  glBindBuffer( GL_ARRAY_BUFFER, roomColorBufferID );
+	glBufferData( GL_ARRAY_BUFFER, sizeof(colors), colors, GL_STATIC_DRAW );
   glVertexAttribPointer(
     ATTRIB_NORMAL,				// attribute 1
     3,				// size
@@ -207,10 +213,7 @@ void bind_room()
     GL_FALSE,	// normalized?
     0,				// stride, skip vertex
     (void*)0	// array buffer offset
-  );*/
-  
-  glBindBuffer( GL_ARRAY_BUFFER, 0 ); // deselect (bind to 0) the VBO
-  glBindVertexArray( 0 );  // deselect (bind to 0) the VAO
+  );
   
 }
 
@@ -221,11 +224,11 @@ void render_room()
   glBindVertexArray( roomArrayID );
   
   glEnableVertexAttribArray( ATTRIB_VERTEX );
-  glBindBuffer( GL_ARRAY_BUFFER, roomBufferID );
+  glEnableVertexAttribArray( ATTRIB_NORMAL );
  
-  // draw one triangle
   glDrawArrays( GL_TRIANGLES, 0, room_vertex_count ); // starting from vertex 0; 3 vertices total
-    
+  
+  glDisableVertexAttribArray( ATTRIB_NORMAL );  
   glDisableVertexAttribArray( ATTRIB_VERTEX );
 }
 
@@ -273,15 +276,42 @@ void bind_object()
       0, -1, 0
   };
   
-  object_vertex_count = sizeof(vertex_data) / 3;
+  object_vertex_count = sizeof(vertex_data) / (3 * sizeof(float)); // 3 floats per vertex, 4 bytes each
   
-  float normal_data[sizeof(vertex_data)];
+  float colors[] = {
+    1, 0, 0,
+    1, 0, 0,
+    1, 0, 0,
+     
+    0, 1, 0,
+    0, 1, 0,
+    0, 1, 0,
+      
+    1, 0, 1,
+    1, 0, 1,
+    1, 0, 1,
+      
+    0, 0, 1,
+    0, 0, 1,
+    0, 0, 1,
+     
+    0.25f, 0.25f, 0.25f,
+    0.25f, 0.25f, 0.25f,
+    0.25f, 0.25f, 0.25f,
+      
+    1, 1, 0,
+    1, 1, 0,
+    1, 1, 0,
+    
+    1, 1, 1,
+    1, 1, 1,
+    1, 1, 1,
+    
+    1, 0, 1,
+    1, 0, 0,
+    1, 0, 1
+  };
   
-  //triangle_normals( vertex_data, normal_data );
-  
-  memset( normal_data, 0, sizeof(normal_data) );
- 
-  printf("Generating buffers\n");
   
   glGenVertexArrays( 1, &vertexArrayID );
 	glBindVertexArray( vertexArrayID );
@@ -300,7 +330,7 @@ void bind_object()
   
   glGenBuffers( 1, &normalbuffer );
   glBindBuffer( GL_ARRAY_BUFFER, normalbuffer );
-	glBufferData( GL_ARRAY_BUFFER, sizeof(normal_data), normal_data, GL_STATIC_DRAW );
+	glBufferData( GL_ARRAY_BUFFER, sizeof(colors), colors, GL_STATIC_DRAW );
   glVertexAttribPointer(
     ATTRIB_NORMAL,				// attribute 1
     3,				// size
@@ -309,9 +339,7 @@ void bind_object()
     0,				// stride, skip vertex
     (void*)0	// array buffer offset
   );
-  
-  glBindBuffer( GL_ARRAY_BUFFER, 0 ); // deselect (bind to 0) the VBO
-  glBindVertexArray( 0 );  // deselect (bind to 0) the VAO
+
 }
 
 void render_object()
@@ -337,8 +365,6 @@ static glmMat4f projection;
 static glmMat4f model;
 
 static glmMat4f view;
-
-static glmMat4f modelview;
 
 static glmMat4f mvp;
 
@@ -397,19 +423,8 @@ glmMat4f buildMatrix()
 	mvp = glmMulMat4f( projection, modelview );
   
   //printf("mvp:\n");
-  //print(&mvp);
+  //print(&mvp); 
   
-  /*float mvp2[] = {
-    1.0, 0.0, 0.0, 0.0,
-    0.0, 1.0, 0.0, 0.0,
-    0.0, 0.0, 1.0, -10.0,
-    0.0, 0.0, 0.0, 1.0
-  };*/
-  
-  //print(&mvp);
-  
-  
-	//return *((glmMat4f*)(&mvp2));
 	return mvp;
 }
 
@@ -436,17 +451,12 @@ int main( int argc, char* argv[] )
   printf(" loaded program %d \n", programID);
 	
   // bind VBOs
-	bind_object();
+	
   bind_room();
+  bind_object();
 	
   // configure uniforms
-  GLuint modelviewID = glGetUniformLocation( programID, "MV" );
 	GLuint mvpUniformID = glGetUniformLocation( programID, "MVP" );
-  GLuint vUniformID = glGetUniformLocation( programID, "V" );
-  GLuint mUniformID = glGetUniformLocation( programID, "M" );
-
-  glUniform3f( glGetUniformLocation( programID, "LightPosition_worldspace" ), 0, 0, 2);
-
 	
 	t = glfwGetTime();
 	
@@ -478,10 +488,6 @@ int main( int argc, char* argv[] )
 		glmMat4f mvp = buildMatrix();
 		
 		glUniformMatrix4fv( mvpUniformID, 1, GL_TRUE, (const GLfloat*)&mvp );
-    glUniformMatrix4fv( modelviewID, 1, GL_TRUE, (const GLfloat*)&modelview );
-    
-    glUniformMatrix4fv( mUniformID, 1, GL_TRUE, (const GLfloat*)&model );
-    glUniformMatrix4fv( vUniformID, 1, GL_TRUE, (const GLfloat*)&view );
     
     // draw VBOs
     render_room();
@@ -502,6 +508,7 @@ int main( int argc, char* argv[] )
   
   // clean up room data
   glDeleteBuffers( 1, &roomBufferID );
+  glDeleteBuffers( 1, &roomColorBufferID );
   glDeleteVertexArrays( 1, &roomArrayID );
   
   glDeleteProgram( programID );
